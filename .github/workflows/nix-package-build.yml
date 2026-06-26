@@ -1,0 +1,56 @@
+name: Nix Package Build
+
+on:
+  push:
+    branches: [main, test]
+    paths:
+      - flake.nix
+      - flake.lock
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/nix-package-build.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - flake.nix
+      - flake.lock
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/nix-package-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-package-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  flake-eval:
+    name: Flake eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check flake outputs without building
+        run: nix flake check --no-build --print-build-logs
+
+  package-build:
+    name: Build default package
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build default package
+        run: nix build --print-build-logs .#packages.x86_64-linux.default
