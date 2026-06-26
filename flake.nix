@@ -56,6 +56,32 @@
         sourcePreference = "wheel";
       };
 
+      # Some legacy PyAutoGUI stack sdists do not declare setuptools, so uv2nix
+      # needs the build backend supplied explicitly.
+      buildSystemOverrides = final: prev:
+      let
+        withSetuptools = package:
+          package.overrideAttrs (old: {
+            nativeBuildInputs =
+              (old.nativeBuildInputs or [ ])
+              ++ final.resolveBuildSystem {
+                setuptools = [ ];
+              };
+          });
+      in
+      {
+        mouseinfo = withSetuptools prev.mouseinfo;
+        pyautogui = withSetuptools prev.pyautogui;
+        pygetwindow = withSetuptools prev.pygetwindow;
+        pymsgbox = withSetuptools prev.pymsgbox;
+        pyperclip = withSetuptools prev.pyperclip;
+        pyrect = withSetuptools prev.pyrect;
+        pyscreeze = withSetuptools prev.pyscreeze;
+        pytweening = withSetuptools prev.pytweening;
+        qrcode-terminal = withSetuptools prev.qrcode-terminal;
+        safeio = withSetuptools prev.safeio;
+      };
+
       # 开发 shell 使用 editable 安装；源码路径通过 shellHook 里的 REPO_ROOT 注入。
       editableOverlay = workspace.mkEditablePyprojectOverlay {
         root = "$REPO_ROOT";
@@ -84,6 +110,7 @@
           lib.composeManyExtensions [
             pyproject-build-systems.overlays.wheel
             overlay
+            buildSystemOverrides
           ]
         )
       );
